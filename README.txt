@@ -29,5 +29,13 @@ encoding is the encoding that IRC users are expected to use.
 mappings is a list of mappings from channel names to MUC rooms on
 other MUC services.
 
+Note that this module doesn't do SASL ANONYMOUS authentication.  This
+means that to use anonymous authentication, the "anonymous_protocol"
+option needs to be either "login_anon" or "both", for example:
+
+{host_config, "anonymous.example.org",
+	      [{auth_method, anonymous},
+	       {anonymous_protocol, both}]}.
+
 Author: Magnus Henoch, xmpp:legoscia@jabber.cd.chalmers.se,
 mailto:henoch@dtek.chalmers.se
