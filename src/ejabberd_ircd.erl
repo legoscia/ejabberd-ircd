@@ -538,7 +538,7 @@ wait_for_cmd({route, From, _To, {xmlelement, "message", Attrs, Els} = El}, State
 		error ->
 		    ?ERROR_MSG("got message from ~s without having joined it",
 			       [jlib:jid_to_string(ChannelJID)]),
-		    #channel{}
+		    {next_state, wait_for_cmd, State}
 	    end;
 	"error" ->
 	    MucHost = State#state.muc_host,
