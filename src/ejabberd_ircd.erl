@@ -209,7 +209,7 @@ wait_for_nick({line, #line{command = "NICK", params = Params}}, State) ->
 			    SID = {now(), self()},
 			    ejabberd_sm:open_session(
 			      SID, Nick, Server, "irc"),
-			    send_command("", "001", [Nick, "IRC interface of ejabberd server "++Server], State),
+			    send_text_command("", "001", [Nick, "IRC interface of ejabberd server "++Server], State),
 			    send_reply('RPL_MOTDSTART', [Nick, "- "++Server++" Message of the day - "], State),
 			    send_reply('RPL_MOTD', [Nick, "- This is the IRC interface of the ejabberd server "++Server++"."], State),
 			    send_reply('RPL_MOTD', [Nick, "- Your full JID is "++Nick++"@"++Server++"/irc."], State),
@@ -274,12 +274,12 @@ wait_for_cmd({line, #line{command = "PRIVMSG", params = [To, Text]}}, State) ->
 			      ToJID = channel_nick_to_jid(Nick, Channel, State),
 			      ejabberd_router:route(FromJID, ToJID, Packet);
 			  _ ->
-			      send_command(Rcpt, "NOTICE", [State#state.nick,
-							    "Your message to "++
-							    Rcpt++
-							    " was dropped.  "
-							    "Try sending it to "++Rcpt++
-							    "#somechannel."], State)
+			      send_text_command(Rcpt, "NOTICE", [State#state.nick,
+								 "Your message to "++
+								 Rcpt++
+								 " was dropped.  "
+								 "Try sending it to "++Rcpt++
+								 "#somechannel."], State)
 		      end
 	      end
       end, Recipients),
@@ -510,8 +510,8 @@ wait_for_cmd({route, From, _To, {xmlelement, "message", Attrs, Els} = El}, State
 							     $\ ;
 							(C) -> C
 						     end, Subject),
-			    send_command(make_irc_sender(From, State),
-					 "TOPIC", [FromChannel, CleanSubject], State),
+			    send_text_command(make_irc_sender(From, State),
+					      "TOPIC", [FromChannel, CleanSubject], State),
 			    NewChannelData = ChannelData#channel{topic = CleanSubject},
 			    NewState = State#state{joined = ?DICT:store(jlib:jid_remove_resource(From), NewChannelData, State#state.joined)},
 			    {next_state, wait_for_cmd, NewState};
@@ -530,8 +530,8 @@ wait_for_cmd({route, From, _To, {xmlelement, "message", Attrs, Els} = El}, State
 					      _ ->
 						  Line
 					  end,
-				      send_command(make_irc_sender(From, State),
-						   "PRIVMSG", [FromChannel, Line1], State)
+				      send_text_command(make_irc_sender(From, State),
+							"PRIVMSG", [FromChannel, Line1], State)
 			      end, BodyLines),
 			    {next_state, wait_for_cmd, State}
 		    end;
@@ -560,9 +560,9 @@ wait_for_cmd({route, From, _To, {xmlelement, "message", Attrs, Els} = El}, State
 	    %% XMPP and non-XMPP error messages...
 	    ErrorText =
 		error_to_string(xml:get_subtag(El, "error")),
-	    send_command("", "NOTICE", [State#state.nick, 
-					"Message to "++ErrorFrom++" bounced: "++
-					ErrorText], State),
+	    send_text_command("", "NOTICE", [State#state.nick, 
+					     "Message to "++ErrorFrom++" bounced: "++
+					     ErrorText], State),
 	    {next_state, wait_for_cmd, State};
 	_ ->
 	    ChannelJID = jlib:jid_remove_resource(From),
@@ -580,7 +580,7 @@ wait_for_cmd({route, From, _To, {xmlelement, "message", Attrs, Els} = El}, State
 				      _ ->
 					  Line
 				  end,
-			      send_command(FromNick, "PRIVMSG", [State#state.nick, Line1], State)
+			      send_text_command(FromNick, "PRIVMSG", [State#state.nick, Line1], State)
 		      end, BodyLines),
 		    {next_state, wait_for_cmd, State};
 	       _ ->
@@ -672,13 +672,21 @@ send_line(Line, #state{sockmod = SockMod, socket = Socket, encoding = Encoding})
     ok = gen_tcp:send(Socket, [EncodedLine, 13, 10]).
 
 send_command(Sender, Command, Params, State) ->
+    send_command(Sender, Command, Params, State, false).
+
+%% Some IRC software require commands with text to have the text
+%% quoted, even it's not if not necessary.
+send_text_command(Sender, Command, Params, State) ->
+    send_command(Sender, Command, Params, State, true).
+
+send_command(Sender, Command, Params, State, AlwaysQuote) ->
     Prefix = case Sender of
 		 "" ->
 		     [$: | State#state.host];
 		 _ ->
 		     [$: | Sender]
 	     end,
-    ParamString = make_param_string(Params),
+    ParamString = make_param_string(Params, AlwaysQuote),
     send_line(Prefix ++ " " ++ Command ++ ParamString, State).
     
 send_reply(Reply, Params, State) ->
@@ -720,22 +728,24 @@ send_reply(Reply, Params, State) ->
 		 'RPL_ENDOFMOTD' ->
 		     "376"
 	     end,
-    send_command("", Number, Params, State).
+    send_text_command("", Number, Params, State).
 
-make_param_string([]) -> "";
-make_param_string([LastParam]) ->
-    case {LastParam, lists:member($\ , LastParam)} of
-	{_, true} ->
+make_param_string([], _) -> "";
+make_param_string([LastParam], AlwaysQuote) ->
+    case {AlwaysQuote, LastParam, lists:member($\ , LastParam)} of
+	{true, _, _} ->
 	    " :" ++ LastParam;
-	{[$:|_], _} ->
+	{_, _, true} ->
 	    " :" ++ LastParam;
-	{_, _} ->
+	{_, [$:|_], _} ->
+	    " :" ++ LastParam;
+	{_, _, _} ->
 	    " " ++ LastParam
     end;
-make_param_string([Param | Params]) ->
+make_param_string([Param | Params], AlwaysQuote) ->
     case lists:member($\ , Param) of
 	false ->
-	    " " ++ Param ++ make_param_string(Params)
+	    " " ++ Param ++ make_param_string(Params, AlwaysQuote)
     end.
 
 find_el(Name, NS, [{xmlelement, N, Attrs, _} = El|Els]) ->
