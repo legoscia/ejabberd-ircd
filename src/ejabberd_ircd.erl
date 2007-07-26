@@ -208,7 +208,7 @@ wait_for_nick({line, #line{command = "NICK", params = Params}}, State) ->
 			    ?DEBUG("good nickname '~p'", [Nick]),
 			    SID = {now(), self()},
 			    ejabberd_sm:open_session(
-			      SID, Nick, Server, "irc"),
+			      SID, Nick, Server, "irc", peerip(gen_tcp, State#state.socket)),
 			    send_text_command("", "001", [Nick, "IRC interface of ejabberd server "++Server], State),
 			    send_reply('RPL_MOTDSTART', [Nick, "- "++Server++" Message of the day - "], State),
 			    send_reply('RPL_MOTD', [Nick, "- This is the IRC interface of the ejabberd server "++Server++"."], State),
@@ -225,6 +225,16 @@ wait_for_nick(Event, State) ->
     ?DEBUG("in wait_for_nick", []),
     ?INFO_MSG("unexpected event ~p", [Event]),
     {next_state, wait_for_nick, State}.
+
+peerip(SockMod, Socket) ->
+    IP = case SockMod of
+	     gen_tcp -> inet:peername(Socket);
+	     _ -> SockMod:peername(Socket)
+	 end,
+    case IP of
+	{ok, IPOK} -> IPOK;
+	_ -> undefined
+    end.
 
 wait_for_cmd({line, #line{command = "USER", params = [_Username, _Hostname, _Servername, _Realname]}}, State) ->
     %% Yeah, like we care.
