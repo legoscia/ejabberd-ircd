@@ -3,7 +3,7 @@
 %%% Author  : Alexey Shchepin <alexey@sevcom.net>
 %%% Purpose : 
 %%% Created : 31 Jan 2003 by Alexey Shchepin <alexey@sevcom.net>
-%%% Id      : $Id: ejabberd_sup.erl 495 2006-01-29 04:38:31Z alexey $
+%%% Id      : $Id$
 %%%----------------------------------------------------------------------
 
 -module(ejabberd_sup).
