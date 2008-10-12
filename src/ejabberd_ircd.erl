@@ -80,7 +80,7 @@ socket_type() ->
 %% Returns: {ok, StateName, StateData}          |
 %%          {ok, StateName, StateData, Timeout} |
 %%          ignore                              |
-%%          {stop, StopReason}                   
+%%          {stop, StopReason}
 %%----------------------------------------------------------------------
 init([{SockMod, Socket}, Opts]) ->
     iconv:start(),
@@ -174,7 +174,7 @@ terminate(_Reason, _StateName, #state{socket = Socket, sockmod = SockMod,
     ok = gen_tcp:close(Socket),
     ok.
 
-    
+
 wait_for_nick({line, #line{command = "PASS", params = Params}}, State) ->
     ?DEBUG("in wait_for_nick", []),
     Pass = hd(Params),
@@ -317,7 +317,7 @@ wait_for_cmd({line, #line{command = "TOPIC", params = Params}}, State) ->
     case Params of
 	[Channel] ->
 	    %% user asks for topic
-	    case ?DICT:find(channel_to_jid(Channel, State), 
+	    case ?DICT:find(channel_to_jid(Channel, State),
 			    State#state.joined) of
 		{ok, #channel{topic = Topic}} ->
 		    case Topic of
@@ -389,7 +389,7 @@ wait_for_cmd({route, From, _To, {xmlelement, "presence", Attrs, Els} = El}, Stat
     Type = xml:get_attr_s("type", Attrs),
     FromRoom = jlib:jid_remove_resource(From),
     FromNick = From#jid.resource,
-    
+
     Channel = jid_to_channel(From, State),
     MyNick = State#state.nick,
     IRCSender = make_irc_sender(FromNick, FromRoom, State),
@@ -475,7 +475,7 @@ wait_for_cmd({route, From, _To, {xmlelement, "presence", Attrs, Els} = El}, Stat
 				    {'ERR_NOSUCHCHANNEL', "Unknown error"}
 			    end,
 			send_reply(ReplyCode, [Channel, ErrorDescription], State),
-					
+
 			NewJoiningDict = ?DICT:erase(FromRoom, State#state.joining),
 			State#state{joining = NewJoiningDict};
 		    _ ->
@@ -570,7 +570,7 @@ wait_for_cmd({route, From, _To, {xmlelement, "message", Attrs, Els} = El}, State
 	    %% XMPP and non-XMPP error messages...
 	    ErrorText =
 		error_to_string(xml:get_subtag(El, "error")),
-	    send_text_command("", "NOTICE", [State#state.nick, 
+	    send_text_command("", "NOTICE", [State#state.nick,
 					     "Message to "++ErrorFrom++" bounced: "++
 					     ErrorText], State),
 	    {next_state, wait_for_cmd, State};
@@ -607,11 +607,11 @@ join_channels([], _, State) ->
     State;
 join_channels(Channels, [], State) ->
     join_channels(Channels, [none], State);
-join_channels([Channel | Channels], [Key | Keys], 
+join_channels([Channel | Channels], [Key | Keys],
 	      #state{nick = Nick} = State) ->
     Packet =
 	{xmlelement, "presence", [],
-	 [{xmlelement, "x", [{"xmlns", ?NS_MUC}], 
+	 [{xmlelement, "x", [{"xmlns", ?NS_MUC}],
 	   case Key of
 	       none ->
 		   [];
@@ -644,7 +644,7 @@ part_channels([Channel | Channels], State, Message) ->
     part_channels(Channels, NewState, Message).
 
 parse_line(Line) ->
-    {Line1, LastParam} = 
+    {Line1, LastParam} =
 	case string:str(Line, " :") of
 	    0 ->
 		{Line, []};
@@ -698,7 +698,7 @@ send_command(Sender, Command, Params, State, AlwaysQuote) ->
 	     end,
     ParamString = make_param_string(Params, AlwaysQuote),
     send_line(Prefix ++ " " ++ Command ++ ParamString, State).
-    
+
 send_reply(Reply, Params, State) ->
     Number = case Reply of
 		 'ERR_UNKNOWNCOMMAND' ->
@@ -838,7 +838,7 @@ parse_error({xmlelement, "error", _ErrorAttrs, ErrorEls} = ErrorEl) ->
 	    _ ->
 		"unknown error"
 	end,
-    ErrorText = 
+    ErrorText =
 	case ErrorTextEl of
 	    {xmlelement, _, _, _} ->
 		xml:get_tag_cdata(ErrorTextEl);
@@ -846,7 +846,7 @@ parse_error({xmlelement, "error", _ErrorAttrs, ErrorEls} = ErrorEl) ->
 		nothing
     end,
     {ErrorName, ErrorText}.
-    
+
 error_to_string({xmlelement, "error", _ErrorAttrs, _ErrorEls} = ErrorEl) ->
     case parse_error(ErrorEl) of
 	{ErrorName, ErrorText} when is_list(ErrorText) ->
