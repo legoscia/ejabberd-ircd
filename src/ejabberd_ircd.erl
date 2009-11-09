@@ -813,6 +813,7 @@ filter_message(Msg) ->
     lists:filter(
       fun(C) ->
 	      if (C < 32) and
+		 (C /= 3) and
 		 (C /= 9) and
 		 (C /= 10) and
 		 (C /= 13) ->
