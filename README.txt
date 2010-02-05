@@ -4,7 +4,7 @@
 	Author:
 	  Magnus Henoch
 	  xmpp:legoscia@jabber.cd.chalmers.se,
-	  mailto:henoch@dtek.chalmers.se
+	  mailto:magnus.henoch@gmail.com
 	Homepage:
 	  http://www.dtek.chalmers.se/~henoch/text/ejabberd-ircd.html
 	Requirements:
